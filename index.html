@@ -227,8 +227,7 @@
                     drawPreview();
                     statusDiv.textContent = "Ready to split";
 
-                    // Enable single export UI once an image exists (still needs a click to select).
-                    singleExportPanel.style.display = "block";
+                    // Keep single export UI hidden until an icon is clicked.
                     setSelectedIcon(null);
                 }
                 img.src = event.target.result;
