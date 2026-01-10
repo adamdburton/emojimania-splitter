@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmojiMania Splitter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        .canvas-container {
+            overflow: auto;
+            max-height: 70vh;
+            border: 2px solid #374151;
+            background-color: #1f2937;
+            position: relative;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-sans">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold mb-6 text-blue-400">EmojiMania Icon Splitter</h1>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar Controls -->
+            <div class="bg-gray-800 p-4 rounded-lg shadow-lg h-fit space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-400 mb-1">Source Image</label>
+                    <input type="file" id="fileInput" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
+                </div>
+
+                <div class="border-t border-gray-700 pt-4 space-y-3">
+                    <h2 class="text-lg font-semibold text-gray-200">Grid Settings</h2>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500">Left Offset</label>
+                            <input type="number" id="offsetX" value="12" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500">Top Offset</label>
+                            <input type="number" id="offsetY" value="34" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500">Icon Width</label>
+                            <input type="number" id="iconWidth" value="9" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500">Icon Height</label>
+                            <input type="number" id="iconHeight" value="9" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                         <div>
+                            <label class="block text-xs uppercase text-gray-500">Gap X</label>
+                            <input type="number" id="gapX" value="2" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase text-gray-500">Gap Y</label>
+                            <input type="number" id="gapY" value="2" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs uppercase text-gray-500">Group Count</label>
+                        <input type="number" id="groupCount" value="7" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs uppercase text-gray-500">Group Names</label>
+                        <input type="text" id="groupNames" value="people, nature, food, activity, travel, objects, symbols" placeholder="Animals, Faces, Food" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Comma-separated (spaces optional). Used for export names.</p>
+                    </div>
+
+                     <div>
+                        <label class="block text-xs uppercase text-gray-500">Group Offset X</label>
+                        <input type="number" id="groupOffsetX" value="99" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Horizontal distance between start of groups</p>
+                    </div>
+                    
+                    <div>
+                         <label class="block text-xs uppercase text-gray-500">Group Cols</label>
+                         <input type="number" id="colsPerGroup" value="8" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase text-gray-500">Export Scale</label>
+                        <input type="number" id="exportScale" value="1" min="1" max="10" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                    </div>                </div>
+
+                <div class="border-t border-gray-700 pt-4">
+                    <button id="processBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">
+                        Split & Download ZIP
+                    </button>
+                    <div id="status" class="text-xs text-center mt-2 text-gray-400">Wait for upload...</div>
+                </div>
+
+                <div class="border-t border-gray-700 pt-4 space-y-2" id="singleExportPanel" style="display:none;">
+                    <h2 class="text-lg font-semibold text-gray-200">Single Icon Export</h2>
+                    <div class="text-[11px] text-gray-400" id="singleMeta">Click an icon in the preview.</div>
+
+                    <div class="pt-2">
+                        <label class="block text-xs uppercase text-gray-500 mb-1">Preview (4×)</label>
+                        <div class="inline-block rounded border border-gray-600 bg-gray-900 p-2">
+                            <canvas id="singlePreviewCanvas" class="block"></canvas>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs uppercase text-gray-500">Output Name</label>
+                        <input type="text" id="singleOutputName" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="exportSinglePng" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">PNG</button>
+                        <button id="exportSingleSvg" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">SVG</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Preview Area -->
+            <div class="col-span-1 lg:col-span-3">
+                <div class="canvas-container rounded shadow-lg relative" id="canvasContainer">
+                     <canvas id="srcCanvas" class="block"></canvas>
+                     <canvas id="overlayCanvas" class="absolute top-0 left-0 cursor-pointer"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        
+        const srcCanvas = document.getElementById('srcCanvas');
+        const srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+        
+        const overlayCanvas = document.getElementById('overlayCanvas');
+        const overlayCtx = overlayCanvas.getContext('2d');
+
+        const processBtn = document.getElementById('processBtn');
+        const statusDiv = document.getElementById('status');
+
+        const singleExportPanel = document.getElementById('singleExportPanel');
+        const singleMeta = document.getElementById('singleMeta');
+        const singleOutputName = document.getElementById('singleOutputName');
+        const exportSinglePngBtn = document.getElementById('exportSinglePng');
+        const exportSingleSvgBtn = document.getElementById('exportSingleSvg');
+
+        const singlePreviewCanvas = document.getElementById('singlePreviewCanvas');
+        const singlePreviewCtx = singlePreviewCanvas.getContext('2d');
+        const SINGLE_PREVIEW_SCALE = 4;
+        
+        // Inputs
+        const inputs = {
+            offsetX: document.getElementById('offsetX'),
+            offsetY: document.getElementById('offsetY'),
+            iconWidth: document.getElementById('iconWidth'),
+            iconHeight: document.getElementById('iconHeight'),
+            gapX: document.getElementById('gapX'),
+            gapY: document.getElementById('gapY'),
+            groupCount: document.getElementById('groupCount'),
+            groupNames: document.getElementById('groupNames'),
+            groupOffsetX: document.getElementById('groupOffsetX'),
+            colsPerGroup: document.getElementById('colsPerGroup'),
+            exportScale: document.getElementById('exportScale'),
+        };
+
+        let img = new Image();
+        let isImageLoaded = false;
+
+        /** @type {{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}[]} */
+        let detectedIcons = [];
+        /** @type {null|{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}} */
+        let selectedIcon = null;
+
+        // Event Listeners
+        fileInput.addEventListener('change', handleFileSelect);
+        Object.values(inputs).forEach(input => input.addEventListener('input', drawPreview));
+        processBtn.addEventListener('click', processAndDownload);
+        window.addEventListener('resize', drawPreview);
+        overlayCanvas.addEventListener('click', handleCanvasClick);
+        exportSinglePngBtn.addEventListener('click', () => exportSelectedSingle('png'));
+        exportSingleSvgBtn.addEventListener('click', () => exportSelectedSingle('svg'));
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                img = new Image();
+                img.onload = function() {
+                    isImageLoaded = true;
+                    // Reset offsets potentially or keep default? Let's keep default but maybe guess Group Offset?
+                    // For now, just draw.
+                    processBtn.removeAttribute('disabled');
+                    drawPreview();
+                    statusDiv.textContent = "Ready to split";
+
+                    // Enable single export UI once an image exists (still needs a click to select).
+                    singleExportPanel.style.display = "block";
+                    setSelectedIcon(null);
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+
+        function getSettings() {
+            return {
+                xOrig: parseInt(inputs.offsetX.value) || 12,
+                yOrig: parseInt(inputs.offsetY.value) || 34,
+                w: parseInt(inputs.iconWidth.value) || 9,
+                h: parseInt(inputs.iconHeight.value) || 9,
+                gapX: parseInt(inputs.gapX.value) || 2,
+                gapY: parseInt(inputs.gapY.value) || 2,
+                groups: parseInt(inputs.groupCount.value) || 7,
+                groupNames: parseGroupNames(inputs.groupNames.value || "people, nature, food, activity, travel, objects, symbols"),
+                groupOffX: parseInt(inputs.groupOffsetX.value) || 99,
+                cols: parseInt(inputs.colsPerGroup.value) || 8,
+                scale: parseInt(inputs.exportScale.value) || 1
+            };
+        }
+
+        function parseGroupNames(raw) {
+            return raw
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+        }
+
+        function sanitizeFilePart(name) {
+            // Windows/macOS-safe-ish: remove reserved characters and collapse spaces.
+            return String(name)
+                .replace(/[\\/:*?"<>|]+/g, "_")
+                .replace(/\s+/g, " ")
+                .trim();
+        }
+
+        function getGroupLabel(s, gIndex) {
+            const raw = (s.groupNames && s.groupNames[gIndex]) ? s.groupNames[gIndex] : `group${gIndex + 1}`;
+            const safe = sanitizeFilePart(raw);
+            return safe || `group${gIndex + 1}`;
+        }
+
+        function padIndex(n) {
+            // 3-digit padding keeps names stable and sortable for typical sheets.
+            // If you expect >999 icons per group, bump to 4.
+            return String(n).padStart(3, '0');
+        }
+
+        function makeDefaultIconName(icon) {
+            if (icon && typeof icon.indexInGroup === 'number' && icon.indexInGroup > 0) {
+                return `${icon.groupLabel}_${padIndex(icon.indexInGroup)}`;
+            }
+            return `${icon.groupLabel}_row${icon.row + 1}_col${icon.col + 1}`;
+        }
+
+        function isBlockBlack(x, y, w, h) {
+            // Get pixel data
+            try {
+                const p = srcCtx.getImageData(x, y, w, h).data;
+                for (let i = 0; i < p.length; i += 4) {
+                    const r = p[i];
+                    const g = p[i+1];
+                    const b = p[i+2];
+                    const a = p[i+3];
+                    // Check for non-black pixel
+                    // If any pixel is NOT black (including transparent), return false?
+                    // Prompt said "9x9 all-black pixels".
+                    // Assuming "black" is (0,0,0,255).
+                    if (r !== 0 || g !== 0 || b !== 0 || a !== 255) {
+                        return false; 
+                    }
+                }
+                return true;
+            } catch (e) {
+                return false; // Out of bounds or error
+            }
+        }
+
+        function drawPreview() {
+            if (!isImageLoaded) return;
+
+            const s = getSettings();
+
+            detectedIcons = [];
+            
+            // Resize canvases to match image
+            if (srcCanvas.width !== img.width || srcCanvas.height !== img.height) {
+                srcCanvas.width = img.width;
+                srcCanvas.height = img.height;
+                overlayCanvas.width = img.width;
+                overlayCanvas.height = img.height;
+            }
+
+            // Draw Source Image
+            srcCtx.drawImage(img, 0, 0);
+
+            // Clear Overlay
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            // Draw Grid on Overlay
+            overlayCtx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
+            overlayCtx.fillStyle = 'rgba(255, 0, 255, 0.2)';
+            overlayCtx.lineWidth = 1;
+
+            for (let g = 0; g < s.groups; g++) {
+                const groupStartX = s.xOrig + (g * s.groupOffX);
+                const groupLabel = getGroupLabel(s, g);
+                let indexInGroup = 0;
+                
+                let row = 0;
+                let activeGroup = true;
+                
+                while (activeGroup) {
+                    // Safety break
+                    if (row > 5000) break; 
+                    
+                    const rowY = s.yOrig + row * (s.h + s.gapY);
+                    if (rowY + s.h > overlayCanvas.height) break;
+
+                    for (let col = 0; col < s.cols; col++) {
+                        const colX = groupStartX + col * (s.w + s.gapX);
+                        if (colX + s.w > overlayCanvas.width) break;
+
+                        // Check for black block
+                        const isBlack = isBlockBlack(colX, rowY, s.w, s.h);
+                        
+                        if (isBlack) {
+                            if (col === 0) {
+                                // End of group logic
+                                activeGroup = false;
+                                break;
+                            } else {
+                                // End of row logic
+                                break; // Stop this row, next row
+                            }
+                        }
+
+                        indexInGroup++;
+                        const icon = { g, row, col, x: colX, y: rowY, w: s.w, h: s.h, indexInGroup, groupLabel };
+                        detectedIcons.push(icon);
+
+                        // Draw Rect
+                        overlayCtx.strokeRect(colX, rowY, s.w, s.h);
+                        overlayCtx.fillRect(colX, rowY, s.w, s.h);
+                    }
+
+                    if (!activeGroup) break;
+                    // If we finished a row and processed something, go to next row
+                    row++;
+                }
+            }
+
+            // Highlight selected icon, if it still exists.
+            if (selectedIcon) {
+                const stillThere = detectedIcons.find(ic => ic.g === selectedIcon.g && ic.row === selectedIcon.row && ic.col === selectedIcon.col);
+                if (!stillThere) {
+                    setSelectedIcon(null);
+                } else {
+                    // Refresh selected icon details (incl. index) after re-detection.
+                    selectedIcon = stillThere;
+                    overlayCtx.save();
+                    overlayCtx.strokeStyle = 'rgba(0, 255, 255, 0.95)';
+                    overlayCtx.lineWidth = 2;
+                    overlayCtx.strokeRect(selectedIcon.x + 0.5, selectedIcon.y + 0.5, selectedIcon.w - 1, selectedIcon.h - 1);
+                    overlayCtx.restore();
+                }
+            }
+
+            // Keep the single preview in sync with any setting changes.
+            updateSinglePreview();
+        }
+
+        function setSelectedIcon(icon) {
+            selectedIcon = icon;
+
+            const disabled = !selectedIcon;
+            exportSinglePngBtn.disabled = disabled;
+            exportSingleSvgBtn.disabled = disabled;
+            singleOutputName.disabled = disabled;
+
+            if (!selectedIcon) {
+                singleMeta.textContent = "Click an icon in the preview.";
+                singleOutputName.value = "";
+                updateSinglePreview();
+                return;
+            }
+
+            const idxLabel = (typeof selectedIcon.indexInGroup === 'number' && selectedIcon.indexInGroup > 0)
+                ? `#${padIndex(selectedIcon.indexInGroup)}`
+                : `row ${selectedIcon.row + 1} • col ${selectedIcon.col + 1}`;
+
+            singleMeta.textContent = `${selectedIcon.groupLabel} • ${idxLabel}`;
+            singleOutputName.value = makeDefaultIconName(selectedIcon);
+            updateSinglePreview();
+        }
+
+        function handleCanvasClick(e) {
+            if (!isImageLoaded || detectedIcons.length === 0) return;
+
+            // offsetX/Y are already relative to the canvas element.
+            const x = e.offsetX;
+            const y = e.offsetY;
+
+            const hit = detectedIcons.find(ic => x >= ic.x && x < ic.x + ic.w && y >= ic.y && y < ic.y + ic.h);
+            if (!hit) {
+                setSelectedIcon(null);
+                drawPreview();
+                return;
+            }
+
+            setSelectedIcon(hit);
+            drawPreview();
+        }
+
+        function extractIconImageDataWithScale(icon, scaleOverride) {
+            const s = getSettings();
+            const imageData = srcCtx.getImageData(icon.x, icon.y, s.w, s.h);
+
+            // Remove black background pixels.
+            for (let i = 0; i < imageData.data.length; i += 4) {
+                const r = imageData.data[i];
+                const g = imageData.data[i + 1];
+                const b = imageData.data[i + 2];
+                if (r === 0 && g === 0 && b === 0) {
+                    imageData.data[i + 3] = 0;
+                }
+            }
+            return { imageData, w: s.w, h: s.h, scale: scaleOverride ?? s.scale };
+        }
+
+        function extractIconImageData(icon) {
+            return extractIconImageDataWithScale(icon, undefined);
+        }
+
+        function updateSinglePreview() {
+            if (!singlePreviewCanvas || !singlePreviewCtx) return;
+
+            if (!isImageLoaded || !selectedIcon) {
+                singlePreviewCanvas.width = 1;
+                singlePreviewCanvas.height = 1;
+                singlePreviewCtx.clearRect(0, 0, 1, 1);
+                return;
+            }
+
+            const { imageData, w, h } = extractIconImageDataWithScale(selectedIcon, SINGLE_PREVIEW_SCALE);
+
+            // Draw scaled with nearest-neighbor.
+            singlePreviewCanvas.width = w * SINGLE_PREVIEW_SCALE;
+            singlePreviewCanvas.height = h * SINGLE_PREVIEW_SCALE;
+            singlePreviewCtx.imageSmoothingEnabled = false;
+            singlePreviewCtx.clearRect(0, 0, singlePreviewCanvas.width, singlePreviewCanvas.height);
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+
+            singlePreviewCtx.drawImage(
+                tempCanvas,
+                0, 0, w, h,
+                0, 0, w * SINGLE_PREVIEW_SCALE, h * SINGLE_PREVIEW_SCALE
+            );
+        }
+
+        function exportSelectedSingle(kind) {
+            if (!selectedIcon) return;
+
+            const { imageData, w, h, scale } = extractIconImageData(selectedIcon);
+            const baseNameRaw = (singleOutputName.value || makeDefaultIconName(selectedIcon)).trim();
+            const baseName = sanitizeFilePart(baseNameRaw) || makeDefaultIconName(selectedIcon);
+
+            if (kind === 'png') {
+                const hiddenCanvas = document.createElement('canvas');
+                hiddenCanvas.width = w * scale;
+                hiddenCanvas.height = h * scale;
+                const hCtx = hiddenCanvas.getContext('2d');
+                hCtx.imageSmoothingEnabled = false;
+
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+
+                hCtx.drawImage(tempCanvas, 0, 0, w, h, 0, 0, w * scale, h * scale);
+                hiddenCanvas.toBlob((blob) => {
+                    if (!blob) return;
+                    saveAs(blob, `${baseName}.png`);
+                }, 'image/png');
+                return;
+            }
+
+            if (kind === 'svg') {
+                const svgContent = generateSvg(imageData, w, h, scale);
+                const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+                saveAs(blob, `${baseName}.svg`);
+            }
+        }
+
+        async function processAndDownload() {
+            if (!isImageLoaded) return;
+            processBtn.disabled = true;
+            statusDiv.textContent = "Processing...";
+            
+            const zip = new JSZip();
+            const s = getSettings();
+            const sFolder = zip.folder("svg");
+            const pFolder = zip.folder("png");
+
+            for (let g = 0; g < s.groups; g++) {
+                const groupStartX = s.xOrig + (g * s.groupOffX);
+                const groupLabel = getGroupLabel(s, g);
+                let indexInGroup = 0;
+                let row = 0;
+                let activeGroup = true;
+
+                while (activeGroup) {
+                    if (row > 5000) break; // Safety
+                    const rowY = s.yOrig + row * (s.h + s.gapY);
+                    if (rowY + s.h > img.height) break;
+
+                    for (let col = 0; col < s.cols; col++) {
+                        const colX = groupStartX + col * (s.w + s.gapX);
+                        if (colX + s.w > img.width) break;
+
+                        const isBlack = isBlockBlack(colX, rowY, s.w, s.h);
+                        if (isBlack) {
+                            if (col === 0) { activeGroup = false; break; } 
+                            else { break; }
+                        }
+
+                        indexInGroup++;
+
+                        // Extract from source canvas (clean)
+                        const imageData = srcCtx.getImageData(colX, rowY, s.w, s.h);
+                        
+                        // Remove black background
+                        for (let i = 0; i < imageData.data.length; i += 4) {
+                            if (imageData.data[i] === 0 && imageData.data[i+1] === 0 && imageData.data[i+2] === 0) {
+                                imageData.data[i+3] = 0;
+                            }
+                        }
+
+                        const fileName = `${groupLabel}_${padIndex(indexInGroup)}`;
+
+                        // 1. PNG Scale + Export
+                        const hiddenCanvas = document.createElement('canvas');
+                        hiddenCanvas.width = s.w * s.scale;
+                        hiddenCanvas.height = s.h * s.scale;
+                        const hCtx = hiddenCanvas.getContext('2d');
+                        hCtx.imageSmoothingEnabled = false;
+
+                        // Create temp canvas to hold the small image for scaling
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = s.w;
+                        tempCanvas.height = s.h;
+                        tempCanvas.getContext('2d').putImageData(imageData, 0, 0);
+
+                        hCtx.drawImage(tempCanvas, 0, 0, s.w, s.h, 0, 0, s.w * s.scale, s.h * s.scale);
+                        
+                        const pngData = hiddenCanvas.toDataURL("image/png").split(',')[1];
+                        pFolder.file(`${fileName}.png`, pngData, {base64: true});
+
+                        // 2. SVG Scale + Export
+                        const svgContent = generateSvg(imageData, s.w, s.h, s.scale);
+                        sFolder.file(`${fileName}.svg`, svgContent);
+                    }
+                    if (!activeGroup) break;
+                    row++;
+                }
+            }
+
+            statusDiv.textContent = "Zipping...";
+            const content = await zip.generateAsync({type:"blob"});
+            saveAs(content, "emojimania_icons.zip");
+            
+            processBtn.disabled = false;
+            statusDiv.textContent = "Done! Check your downloads.";
+        }
+
+        function generateSvg(imageData, w, h, scale) {
+            let rects = "";
+            const data = imageData.data;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const i = (y * w + x) * 4;
+                    const r = data[i];
+                    const g = data[i+1];
+                    const b = data[i+2];
+                    const a = data[i+3];
+                    
+                    if (a > 0) { // If not fully transparent
+                        const hex = rgbToHex(r, g, b);
+                        const opacity = a < 255 ? ` fill-opacity="${(a/255).toFixed(2)}"` : "";
+                        rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}"${opacity}/>`;
+                    }
+                }
+            }
+            const finalW = w * scale || w;
+            const finalH = h * scale || h;
+            return `<svg xmlns="http://www.w3.org/2000/svg" width="${finalW}" height="${finalH}" viewBox="0 0 ${w} ${h}">${rects}</svg>`;
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+    </script>
+</body>
+</html>
