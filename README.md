@@ -2,6 +2,8 @@
 
 Splits an EmojiMania sprite sheet into individual **PNG** and **SVG** icons (including optional scaling), directly in the browser.
 
+Live: https://adamdburton.github.io/emojimania-splitter/
+
 ![Preview](preview.png)
 
 ## Use
