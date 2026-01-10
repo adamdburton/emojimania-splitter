@@ -197,11 +197,17 @@
         /** @type {null|{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}} */
         let selectedIcon = null;
 
+        /** @type {Map<string, {g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}>} */
+        let iconByKey = new Map();
+        /** @type {Map<number, Map<number, number[]>>} */
+        let groupRowCols = new Map();
+
         // Event Listeners
         fileInput.addEventListener('change', handleFileSelect);
         Object.values(inputs).forEach(input => input.addEventListener('input', drawPreview));
         processBtn.addEventListener('click', processAndDownload);
         window.addEventListener('resize', drawPreview);
+        window.addEventListener('keydown', handleKeyDown);
         overlayCanvas.addEventListener('click', handleCanvasClick);
         exportSinglePngBtn.addEventListener('click', () => exportSelectedSingle('png'));
         exportSingleSvgBtn.addEventListener('click', () => exportSelectedSingle('svg'));
@@ -228,6 +234,165 @@
                 img.src = event.target.result;
             }
             reader.readAsDataURL(file);
+        }
+
+        function isTypingIntoField() {
+            const el = document.activeElement;
+            if (!el) return false;
+            const tag = (el.tagName || "").toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+            if (el.isContentEditable) return true;
+            return false;
+        }
+
+        function keyForIcon(icon) {
+            return `${icon.g}:${icon.row}:${icon.col}`;
+        }
+
+        function buildIconIndexes() {
+            iconByKey = new Map();
+            groupRowCols = new Map();
+
+            for (const ic of detectedIcons) {
+                iconByKey.set(keyForIcon(ic), ic);
+
+                if (!groupRowCols.has(ic.g)) groupRowCols.set(ic.g, new Map());
+                const rowMap = groupRowCols.get(ic.g);
+                if (!rowMap.has(ic.row)) rowMap.set(ic.row, []);
+                rowMap.get(ic.row).push(ic.col);
+            }
+
+            // Sort columns per row for consistent navigation.
+            for (const rowMap of groupRowCols.values()) {
+                for (const [row, cols] of rowMap.entries()) {
+                    cols.sort((a, b) => a - b);
+                    rowMap.set(row, cols);
+                }
+            }
+        }
+
+        function findClosestColInRow(rowCols, desiredCol) {
+            if (!rowCols || rowCols.length === 0) return null;
+            // Prefer exact match; otherwise nearest by absolute distance.
+            let best = rowCols[0];
+            let bestDist = Math.abs(best - desiredCol);
+            for (const c of rowCols) {
+                const d = Math.abs(c - desiredCol);
+                if (d < bestDist) {
+                    bestDist = d;
+                    best = c;
+                }
+            }
+            return best;
+        }
+
+        function navigateSelection(direction) {
+            if (!isImageLoaded || !selectedIcon) return false;
+            const g = selectedIcon.g;
+            const rowMap = groupRowCols.get(g);
+            if (!rowMap) return false;
+
+            const currentRow = selectedIcon.row;
+            const currentCol = selectedIcon.col;
+
+            if (direction === 'left' || direction === 'right') {
+                const cols = rowMap.get(currentRow) || [];
+                if (cols.length === 0) return false;
+
+                if (direction === 'left') {
+                    // Same row: previous col.
+                    for (let i = cols.length - 1; i >= 0; i--) {
+                        if (cols[i] < currentCol) {
+                            const hit = iconByKey.get(`${g}:${currentRow}:${cols[i]}`);
+                            if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                        }
+                    }
+                    // Previous rows: last icon in the nearest previous row.
+                    const rows = Array.from(rowMap.keys()).sort((a, b) => a - b);
+                    for (let i = rows.length - 1; i >= 0; i--) {
+                        const r = rows[i];
+                        if (r >= currentRow) continue;
+                        const rCols = rowMap.get(r) || [];
+                        if (rCols.length === 0) continue;
+                        const hit = iconByKey.get(`${g}:${r}:${rCols[rCols.length - 1]}`);
+                        if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                    }
+                    return false;
+                }
+
+                // direction === 'right'
+                for (let i = 0; i < cols.length; i++) {
+                    if (cols[i] > currentCol) {
+                        const hit = iconByKey.get(`${g}:${currentRow}:${cols[i]}`);
+                        if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                    }
+                }
+                // Next rows: first icon in the nearest next row.
+                const rows = Array.from(rowMap.keys()).sort((a, b) => a - b);
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (r <= currentRow) continue;
+                    const rCols = rowMap.get(r) || [];
+                    if (rCols.length === 0) continue;
+                    const hit = iconByKey.get(`${g}:${r}:${rCols[0]}`);
+                    if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                }
+                return false;
+            }
+
+            if (direction === 'up' || direction === 'down') {
+                const rows = Array.from(rowMap.keys()).sort((a, b) => a - b);
+                if (rows.length === 0) return false;
+
+                if (direction === 'up') {
+                    for (let i = rows.length - 1; i >= 0; i--) {
+                        const r = rows[i];
+                        if (r >= currentRow) continue;
+                        const rCols = rowMap.get(r) || [];
+                        const bestCol = findClosestColInRow(rCols, currentCol);
+                        if (bestCol === null) continue;
+                        const hit = iconByKey.get(`${g}:${r}:${bestCol}`);
+                        if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                    }
+                    return false;
+                }
+
+                // direction === 'down'
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (r <= currentRow) continue;
+                    const rCols = rowMap.get(r) || [];
+                    const bestCol = findClosestColInRow(rCols, currentCol);
+                    if (bestCol === null) continue;
+                    const hit = iconByKey.get(`${g}:${r}:${bestCol}`);
+                    if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
+                }
+                return false;
+            }
+
+            return false;
+        }
+
+        function handleKeyDown(e) {
+            if (!isImageLoaded) return;
+            if (isTypingIntoField()) return;
+
+            const key = e.key;
+            let dir = null;
+            if (key === 'ArrowLeft') dir = 'left';
+            else if (key === 'ArrowRight') dir = 'right';
+            else if (key === 'ArrowUp') dir = 'up';
+            else if (key === 'ArrowDown') dir = 'down';
+            if (!dir) return;
+
+            // If nothing is selected but user hits arrows, do nothing.
+            // (Avoid surprising selection changes while scrolling.)
+            if (!selectedIcon) return;
+
+            const moved = navigateSelection(dir);
+            if (moved) {
+                e.preventDefault();
+            }
         }
 
         function getSettings() {
@@ -377,6 +542,8 @@
                 }
             }
 
+            buildIconIndexes();
+
             // Highlight selected icon, if it still exists.
             if (selectedIcon) {
                 const stillThere = detectedIcons.find(ic => ic.g === selectedIcon.g && ic.row === selectedIcon.row && ic.col === selectedIcon.col);
@@ -412,6 +579,9 @@
                 return;
             }
 
+            // Ensure panel is visible when a selection exists.
+            singleExportPanel.style.display = "block";
+
             const idxLabel = (typeof selectedIcon.indexInGroup === 'number' && selectedIcon.indexInGroup > 0)
                 ? `#${padIndex(selectedIcon.indexInGroup)}`
                 : `row ${selectedIcon.row + 1} • col ${selectedIcon.col + 1}`;
@@ -431,6 +601,8 @@
             const hit = detectedIcons.find(ic => x >= ic.x && x < ic.x + ic.w && y >= ic.y && y < ic.y + ic.h);
             if (!hit) {
                 setSelectedIcon(null);
+                // Clicking the background should hide the single-export panel.
+                singleExportPanel.style.display = "none";
                 drawPreview();
                 return;
             }

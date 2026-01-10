@@ -20,4 +20,5 @@ The ZIP contains:
 ## Single Icon Export
 
 - Click an icon in the preview to select it.
+- Use the arrow keys (**← ↑ → ↓**) to move the selection.
 - Export that one icon as **PNG** or **SVG**.
