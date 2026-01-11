@@ -8,14 +8,12 @@
 
     <link rel="canonical" href="https://adamdburton.github.io/emojimania-splitter/">
 
-    <!-- Open Graph / Facebook / Discord / Slack -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://adamdburton.github.io/emojimania-splitter/">
     <meta property="og:title" content="EmojiMania Splitter">
     <meta property="og:description" content="Split an EmojiMania sprite sheet into individual PNG and SVG icons (with optional scaling) directly in the browser.">
     <meta property="og:image" content="https://adamdburton.github.io/emojimania-splitter/preview.png">
 
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="EmojiMania Splitter">
     <meta name="twitter:description" content="Split an EmojiMania sprite sheet into individual PNG and SVG icons (with optional scaling) directly in the browser.">
@@ -39,13 +37,12 @@
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen font-sans">
-    <div class="container mx-auto p-6">
+    <div class=" p-6">
         <h1 class="text-3xl font-bold mb-6 text-blue-400">EmojiMania Icon Splitter</h1>
         
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <!-- Sidebar Controls -->
             <div class="bg-gray-800 p-4 rounded-lg shadow-lg h-fit space-y-4">
-                
                 <div>
                     <label class="block text-sm font-medium text-gray-400 mb-1">Source Image</label>
                     <input type="file" id="fileInput" accept="image/*" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700"/>
@@ -109,23 +106,52 @@
                          <input type="number" id="colsPerGroup" value="8" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-xs uppercase text-gray-500">Export Scale</label>
-                        <input type="number" id="exportScale" value="1" min="1" max="10" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
-                    </div>                </div>
+                        <label class="flex items-center justify-between text-xs uppercase text-gray-500">
+                            <span>Export Scale</span>
+                            <span id="exportScaleValue" class="text-gray-400">1</span>
+                        </label>
+                        <input type="range" id="exportScale" value="1" min="1" max="10" step="1" class="w-full accent-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="flex items-center justify-between text-xs uppercase text-gray-500">
+                            <span>Preview Zoom</span>
+                            <span id="previewZoomValue" class="text-gray-400">3</span>
+                        </label>
+                        <input type="range" id="previewZoom" value="3" min="1" max="10" step="0.25" class="w-full accent-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Scales the preview only (exports unchanged).</p>
+                    </div>
+
+                    <div class="pt-1">
+                        <label class="flex items-center gap-2 text-xs uppercase text-gray-500 select-none">
+                            <input type="checkbox" id="showOverlay" class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                            <span>Show Overlay</span>
+                        </label>
+                        <p class="text-[10px] text-gray-500 mt-1">Toggles the grid overlay visibility.</p>
+                    </div>
+                </div>
 
                 <div class="border-t border-gray-700 pt-4">
                     <button id="processBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">
                         Split & Download ZIP
                     </button>
-                    <div id="status" class="text-xs text-center mt-2 text-gray-400">Wait for upload...</div>
                 </div>
+            </div>
 
-                <div class="border-t border-gray-700 pt-4 space-y-2" id="singleExportPanel" style="display:none;">
+            <!-- Main Preview Area -->
+            <div class="col-span-1 lg:col-span-3">
+                <div class="canvas-container rounded shadow-lg relative" id="canvasContainer">
+                     <canvas id="srcCanvas" class="block"></canvas>
+                     <canvas id="overlayCanvas" class="absolute top-0 left-0 cursor-pointer"></canvas>
+                </div>
+            </div>
+
+            <div class="col-span-1 lg:col-span-1">
+                <div class="bg-gray-800 p-4 rounded-lg shadow-lg space-y-2" id="singleExportPanel" style="display:none;">
                     <h2 class="text-lg font-semibold text-gray-200">Single Icon Export</h2>
-                    <div class="text-[11px] text-gray-400" id="singleMeta">Click an icon in the preview.</div>
 
                     <div class="pt-2">
-                        <label class="block text-xs uppercase text-gray-500 mb-1">Preview (4×)</label>
+                            <label class="block text-xs uppercase text-gray-500 mb-1">Preview (16×)</label>
                         <div class="inline-block rounded border border-gray-600 bg-gray-900 p-2">
                             <canvas id="singlePreviewCanvas" class="block"></canvas>
                         </div>
@@ -135,18 +161,26 @@
                         <label class="block text-xs uppercase text-gray-500">Output Name</label>
                         <input type="text" id="singleOutputName" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 focus:outline-none focus:border-blue-500">
                     </div>
+
+                    <div>
+                        <label class="block text-xs uppercase text-gray-500">Single Export Scale</label>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs uppercase text-gray-500"> </span>
+                            <span id="singleExportScaleValue" class="text-xs text-gray-400">1</span>
+                        </div>
+                        <input type="range" id="singleExportScale" value="1" min="1" max="10" step="1" class="w-full accent-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Applies to single-icon exports only.</p>
+                    </div>
+
+                    <div class="pt-1">
+                        <label class="block text-xs uppercase text-gray-500">Solid Icon Color</label>
+                        <input type="color" id="solidIconColor" value="#ffffff" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 h-9 focus:outline-none focus:border-blue-500">
+                        <p class="text-[10px] text-gray-500 mt-1">Applies only when an icon’s non-transparent pixels are all the same color.</p>
+                    </div>
                     <div class="grid grid-cols-2 gap-2">
                         <button id="exportSinglePng" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-3 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">PNG</button>
                         <button id="exportSingleSvg" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-3 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">SVG</button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Main Preview Area -->
-            <div class="col-span-1 lg:col-span-3">
-                <div class="canvas-container rounded shadow-lg relative" id="canvasContainer">
-                     <canvas id="srcCanvas" class="block"></canvas>
-                     <canvas id="overlayCanvas" class="absolute top-0 left-0 cursor-pointer"></canvas>
                 </div>
             </div>
         </div>
@@ -162,17 +196,18 @@
         const overlayCtx = overlayCanvas.getContext('2d');
 
         const processBtn = document.getElementById('processBtn');
-        const statusDiv = document.getElementById('status');
+
+        const showOverlayInput = document.getElementById('showOverlay');
 
         const singleExportPanel = document.getElementById('singleExportPanel');
-        const singleMeta = document.getElementById('singleMeta');
         const singleOutputName = document.getElementById('singleOutputName');
+        const singleExportScale = document.getElementById('singleExportScale');
         const exportSinglePngBtn = document.getElementById('exportSinglePng');
         const exportSingleSvgBtn = document.getElementById('exportSingleSvg');
 
         const singlePreviewCanvas = document.getElementById('singlePreviewCanvas');
         const singlePreviewCtx = singlePreviewCanvas.getContext('2d');
-        const SINGLE_PREVIEW_SCALE = 4;
+        const SINGLE_PREVIEW_SCALE = 16;
         
         // Inputs
         const inputs = {
@@ -187,15 +222,27 @@
             groupOffsetX: document.getElementById('groupOffsetX'),
             colsPerGroup: document.getElementById('colsPerGroup'),
             exportScale: document.getElementById('exportScale'),
+            solidIconColor: document.getElementById('solidIconColor'),
+            previewZoom: document.getElementById('previewZoom'),
+        };
+
+        const sliderValueLabels = {
+            exportScale: document.getElementById('exportScaleValue'),
+            previewZoom: document.getElementById('previewZoomValue'),
+            singleExportScale: document.getElementById('singleExportScaleValue'),
         };
 
         let img = new Image();
         let isImageLoaded = false;
 
+        let showOverlay = true;
+
         /** @type {{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}[]} */
         let detectedIcons = [];
         /** @type {null|{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}} */
         let selectedIcon = null;
+        /** @type {null|{g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}} */
+        let hoveredIcon = null;
 
         /** @type {Map<string, {g:number,row:number,col:number,x:number,y:number,w:number,h:number,indexInGroup:number,groupLabel:string}>} */
         let iconByKey = new Map();
@@ -205,12 +252,39 @@
         // Event Listeners
         fileInput.addEventListener('change', handleFileSelect);
         Object.values(inputs).forEach(input => input.addEventListener('input', drawPreview));
+        if (inputs.exportScale) inputs.exportScale.addEventListener('input', updateSliderValueLabels);
+        if (inputs.previewZoom) inputs.previewZoom.addEventListener('input', updateSliderValueLabels);
+        if (singleExportScale) singleExportScale.addEventListener('input', updateSliderValueLabels);
         processBtn.addEventListener('click', processAndDownload);
         window.addEventListener('resize', drawPreview);
         window.addEventListener('keydown', handleKeyDown);
         overlayCanvas.addEventListener('click', handleCanvasClick);
+        overlayCanvas.addEventListener('mousemove', handleCanvasHover);
+        overlayCanvas.addEventListener('mouseleave', handleCanvasLeave);
         exportSinglePngBtn.addEventListener('click', () => exportSelectedSingle('png'));
         exportSingleSvgBtn.addEventListener('click', () => exportSelectedSingle('svg'));
+        showOverlayInput.addEventListener('change', handleOverlayToggle);
+
+        handleOverlayToggle();
+        updateSliderValueLabels();
+
+        function updateSliderValueLabels() {
+            if (sliderValueLabels.exportScale && inputs.exportScale) {
+                sliderValueLabels.exportScale.textContent = String(inputs.exportScale.value);
+            }
+            if (sliderValueLabels.previewZoom && inputs.previewZoom) {
+                sliderValueLabels.previewZoom.textContent = String(inputs.previewZoom.value);
+            }
+            if (sliderValueLabels.singleExportScale && singleExportScale) {
+                sliderValueLabels.singleExportScale.textContent = String(singleExportScale.value);
+            }
+        }
+
+        function handleOverlayToggle() {
+            showOverlay = !!showOverlayInput.checked;
+            overlayCanvas.style.opacity = '1';
+            drawPreview();
+        }
 
         function handleFileSelect(e) {
             const file = e.target.files[0];
@@ -221,13 +295,8 @@
                 img = new Image();
                 img.onload = function() {
                     isImageLoaded = true;
-                    // Reset offsets potentially or keep default? Let's keep default but maybe guess Group Offset?
-                    // For now, just draw.
                     processBtn.removeAttribute('disabled');
                     drawPreview();
-                    statusDiv.textContent = "Ready to split";
-
-                    // Keep single export UI hidden until an icon is clicked.
                     setSelectedIcon(null);
                 }
                 img.src = event.target.result;
@@ -248,6 +317,11 @@
             return `${icon.g}:${icon.row}:${icon.col}`;
         }
 
+        function sameIcon(a, b) {
+            if (!a || !b) return false;
+            return a.g === b.g && a.row === b.row && a.col === b.col;
+        }
+
         function buildIconIndexes() {
             iconByKey = new Map();
             groupRowCols = new Map();
@@ -261,7 +335,6 @@
                 rowMap.get(ic.row).push(ic.col);
             }
 
-            // Sort columns per row for consistent navigation.
             for (const rowMap of groupRowCols.values()) {
                 for (const [row, cols] of rowMap.entries()) {
                     cols.sort((a, b) => a - b);
@@ -272,7 +345,7 @@
 
         function findClosestColInRow(rowCols, desiredCol) {
             if (!rowCols || rowCols.length === 0) return null;
-            // Prefer exact match; otherwise nearest by absolute distance.
+
             let best = rowCols[0];
             let bestDist = Math.abs(best - desiredCol);
             for (const c of rowCols) {
@@ -299,14 +372,13 @@
                 if (cols.length === 0) return false;
 
                 if (direction === 'left') {
-                    // Same row: previous col.
                     for (let i = cols.length - 1; i >= 0; i--) {
                         if (cols[i] < currentCol) {
                             const hit = iconByKey.get(`${g}:${currentRow}:${cols[i]}`);
                             if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
                         }
                     }
-                    // Previous rows: last icon in the nearest previous row.
+
                     const rows = Array.from(rowMap.keys()).sort((a, b) => a - b);
                     for (let i = rows.length - 1; i >= 0; i--) {
                         const r = rows[i];
@@ -319,14 +391,13 @@
                     return false;
                 }
 
-                // direction === 'right'
                 for (let i = 0; i < cols.length; i++) {
                     if (cols[i] > currentCol) {
                         const hit = iconByKey.get(`${g}:${currentRow}:${cols[i]}`);
                         if (hit) { setSelectedIcon(hit); drawPreview(); return true; }
                     }
                 }
-                // Next rows: first icon in the nearest next row.
+
                 const rows = Array.from(rowMap.keys()).sort((a, b) => a - b);
                 for (let i = 0; i < rows.length; i++) {
                     const r = rows[i];
@@ -356,7 +427,6 @@
                     return false;
                 }
 
-                // direction === 'down'
                 for (let i = 0; i < rows.length; i++) {
                     const r = rows[i];
                     if (r <= currentRow) continue;
@@ -383,9 +453,6 @@
             else if (key === 'ArrowUp') dir = 'up';
             else if (key === 'ArrowDown') dir = 'down';
             if (!dir) return;
-
-            // If nothing is selected but user hits arrows, do nothing.
-            // (Avoid surprising selection changes while scrolling.)
             if (!selectedIcon) return;
 
             const moved = navigateSelection(dir);
@@ -406,7 +473,80 @@
                 groupNames: parseGroupNames(inputs.groupNames.value || "people, nature, food, activity, travel, objects, symbols"),
                 groupOffX: parseInt(inputs.groupOffsetX.value) || 99,
                 cols: parseInt(inputs.colsPerGroup.value) || 8,
-                scale: parseInt(inputs.exportScale.value) || 1
+                scale: parseInt(inputs.exportScale.value) || 1,
+                solidIconColor: (inputs.solidIconColor && inputs.solidIconColor.value) ? String(inputs.solidIconColor.value) : "#ffffff",
+                previewZoom: Math.max(1, parseFloat(inputs.previewZoom.value) || 3),
+            };
+        }
+
+        function hexToRgb(hex) {
+            const raw = String(hex || "").trim();
+            const m = raw.match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+            if (!m) return null;
+            let h = m[1];
+            if (h.length === 3) h = h.split('').map(ch => ch + ch).join('');
+            const n = parseInt(h, 16);
+            return {
+                r: (n >> 16) & 255,
+                g: (n >> 8) & 255,
+                b: n & 255,
+            };
+        }
+
+        function isIconSolidColor(imageData) {
+            const d = imageData.data;
+            let first = null;
+            for (let i = 0; i < d.length; i += 4) {
+                const a = d[i + 3];
+                if (a === 0) continue;
+                const r = d[i], g = d[i + 1], b = d[i + 2];
+                if (!first) {
+                    first = { r, g, b };
+                    continue;
+                }
+                if (r !== first.r || g !== first.g || b !== first.b) return false;
+            }
+
+            return !!first;
+        }
+
+        function applySolidColorOverrideIfNeeded(imageData, s) {
+            if (!imageData || !imageData.data || !s) return imageData;
+            if (!isIconSolidColor(imageData)) return imageData;
+
+            const rgb = hexToRgb(s.solidIconColor);
+            if (!rgb) return imageData;
+
+            const d = imageData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const a = d[i + 3];
+                if (a === 0) continue;
+                d[i] = rgb.r;
+                d[i + 1] = rgb.g;
+                d[i + 2] = rgb.b;
+            }
+            return imageData;
+        }
+
+        function applyPreviewZoom(zoom) {
+            if (!isImageLoaded) return;
+            const z = Math.max(1, Number(zoom) || 1.5);
+            const cssW = Math.max(1, Math.round(img.width * z));
+            const cssH = Math.max(1, Math.round(img.height * z));
+
+            srcCanvas.style.width = `${cssW}px`;
+            srcCanvas.style.height = `${cssH}px`;
+            overlayCanvas.style.width = `${cssW}px`;
+            overlayCanvas.style.height = `${cssH}px`;
+        }
+
+        function getCanvasPointFromMouseEvent(canvas, e) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY,
             };
         }
 
@@ -418,7 +558,6 @@
         }
 
         function sanitizeFilePart(name) {
-            // Windows/macOS-safe-ish: remove reserved characters and collapse spaces.
             return String(name)
                 .replace(/[\\/:*?"<>|]+/g, "_")
                 .replace(/\s+/g, " ")
@@ -432,8 +571,6 @@
         }
 
         function padIndex(n) {
-            // 3-digit padding keeps names stable and sortable for typical sheets.
-            // If you expect >999 icons per group, bump to 4.
             return String(n).padStart(3, '0');
         }
 
@@ -453,17 +590,14 @@
                     const g = p[i+1];
                     const b = p[i+2];
                     const a = p[i+3];
-                    // Check for non-black pixel
-                    // If any pixel is NOT black (including transparent), return false?
-                    // Prompt said "9x9 all-black pixels".
-                    // Assuming "black" is (0,0,0,255).
+
                     if (r !== 0 || g !== 0 || b !== 0 || a !== 255) {
                         return false; 
                     }
                 }
                 return true;
             } catch (e) {
-                return false; // Out of bounds or error
+                return false;
             }
         }
 
@@ -472,9 +606,10 @@
 
             const s = getSettings();
 
+            updateSliderValueLabels();
+
             detectedIcons = [];
             
-            // Resize canvases to match image
             if (srcCanvas.width !== img.width || srcCanvas.height !== img.height) {
                 srcCanvas.width = img.width;
                 srcCanvas.height = img.height;
@@ -482,13 +617,12 @@
                 overlayCanvas.height = img.height;
             }
 
-            // Draw Source Image
             srcCtx.drawImage(img, 0, 0);
 
-            // Clear Overlay
+            applyPreviewZoom(s.previewZoom);
+
             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-            // Draw Grid on Overlay
             overlayCtx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
             overlayCtx.fillStyle = 'rgba(255, 0, 255, 0.2)';
             overlayCtx.lineWidth = 1;
@@ -502,7 +636,6 @@
                 let activeGroup = true;
                 
                 while (activeGroup) {
-                    // Safety break
                     if (row > 5000) break; 
                     
                     const rowY = s.yOrig + row * (s.h + s.gapY);
@@ -512,17 +645,14 @@
                         const colX = groupStartX + col * (s.w + s.gapX);
                         if (colX + s.w > overlayCanvas.width) break;
 
-                        // Check for black block
                         const isBlack = isBlockBlack(colX, rowY, s.w, s.h);
                         
                         if (isBlack) {
                             if (col === 0) {
-                                // End of group logic
                                 activeGroup = false;
                                 break;
                             } else {
-                                // End of row logic
-                                break; // Stop this row, next row
+                                break;
                             }
                         }
 
@@ -530,26 +660,38 @@
                         const icon = { g, row, col, x: colX, y: rowY, w: s.w, h: s.h, indexInGroup, groupLabel };
                         detectedIcons.push(icon);
 
-                        // Draw Rect
-                        overlayCtx.strokeRect(colX, rowY, s.w, s.h);
-                        overlayCtx.fillRect(colX, rowY, s.w, s.h);
+                        if (showOverlay) {
+                            overlayCtx.strokeRect(colX, rowY, s.w, s.h);
+                            overlayCtx.fillRect(colX, rowY, s.w, s.h);
+                        }
                     }
 
                     if (!activeGroup) break;
-                    // If we finished a row and processed something, go to next row
+                    
                     row++;
                 }
             }
 
             buildIconIndexes();
 
-            // Highlight selected icon, if it still exists.
+            if (hoveredIcon) {
+                const stillThereHover = detectedIcons.find(ic => ic.g === hoveredIcon.g && ic.row === hoveredIcon.row && ic.col === hoveredIcon.col);
+                hoveredIcon = stillThereHover || null;
+            }
+
+            if (hoveredIcon && !sameIcon(hoveredIcon, selectedIcon)) {
+                overlayCtx.save();
+                overlayCtx.strokeStyle = 'rgba(255, 0, 255, 0.95)';
+                overlayCtx.lineWidth = 2;
+                overlayCtx.strokeRect(hoveredIcon.x + 0.5, hoveredIcon.y + 0.5, hoveredIcon.w - 1, hoveredIcon.h - 1);
+                overlayCtx.restore();
+            }
+
             if (selectedIcon) {
                 const stillThere = detectedIcons.find(ic => ic.g === selectedIcon.g && ic.row === selectedIcon.row && ic.col === selectedIcon.col);
                 if (!stillThere) {
                     setSelectedIcon(null);
                 } else {
-                    // Refresh selected icon details (incl. index) after re-detection.
                     selectedIcon = stillThere;
                     overlayCtx.save();
                     overlayCtx.strokeStyle = 'rgba(0, 255, 255, 0.95)';
@@ -559,7 +701,6 @@
                 }
             }
 
-            // Keep the single preview in sync with any setting changes.
             updateSinglePreview();
         }
 
@@ -570,37 +711,34 @@
             exportSinglePngBtn.disabled = disabled;
             exportSingleSvgBtn.disabled = disabled;
             singleOutputName.disabled = disabled;
+            if (singleExportScale) singleExportScale.disabled = disabled;
 
             if (!selectedIcon) {
-                singleMeta.textContent = "Click an icon in the preview.";
                 singleOutputName.value = "";
                 updateSinglePreview();
+                updateSliderValueLabels();
                 return;
             }
 
-            // Ensure panel is visible when a selection exists.
             singleExportPanel.style.display = "block";
 
             const idxLabel = (typeof selectedIcon.indexInGroup === 'number' && selectedIcon.indexInGroup > 0)
                 ? `#${padIndex(selectedIcon.indexInGroup)}`
                 : `row ${selectedIcon.row + 1} • col ${selectedIcon.col + 1}`;
 
-            singleMeta.textContent = `${selectedIcon.groupLabel} • ${idxLabel}`;
             singleOutputName.value = makeDefaultIconName(selectedIcon);
             updateSinglePreview();
+            updateSliderValueLabels();
         }
 
         function handleCanvasClick(e) {
             if (!isImageLoaded || detectedIcons.length === 0) return;
 
-            // offsetX/Y are already relative to the canvas element.
-            const x = e.offsetX;
-            const y = e.offsetY;
+            const { x, y } = getCanvasPointFromMouseEvent(overlayCanvas, e);
 
             const hit = detectedIcons.find(ic => x >= ic.x && x < ic.x + ic.w && y >= ic.y && y < ic.y + ic.h);
             if (!hit) {
                 setSelectedIcon(null);
-                // Clicking the background should hide the single-export panel.
                 singleExportPanel.style.display = "none";
                 drawPreview();
                 return;
@@ -610,11 +748,25 @@
             drawPreview();
         }
 
+        function handleCanvasHover(e) {
+            if (!isImageLoaded || detectedIcons.length === 0) return;
+            const { x, y } = getCanvasPointFromMouseEvent(overlayCanvas, e);
+            const hit = detectedIcons.find(ic => x >= ic.x && x < ic.x + ic.w && y >= ic.y && y < ic.y + ic.h) || null;
+            if (sameIcon(hit, hoveredIcon)) return;
+            hoveredIcon = hit;
+            drawPreview();
+        }
+
+        function handleCanvasLeave() {
+            if (!hoveredIcon) return;
+            hoveredIcon = null;
+            drawPreview();
+        }
+
         function extractIconImageDataWithScale(icon, scaleOverride) {
             const s = getSettings();
             const imageData = srcCtx.getImageData(icon.x, icon.y, s.w, s.h);
 
-            // Remove black background pixels.
             for (let i = 0; i < imageData.data.length; i += 4) {
                 const r = imageData.data[i];
                 const g = imageData.data[i + 1];
@@ -623,6 +775,8 @@
                     imageData.data[i + 3] = 0;
                 }
             }
+
+            applySolidColorOverrideIfNeeded(imageData, s);
             return { imageData, w: s.w, h: s.h, scale: scaleOverride ?? s.scale };
         }
 
@@ -642,7 +796,6 @@
 
             const { imageData, w, h } = extractIconImageDataWithScale(selectedIcon, SINGLE_PREVIEW_SCALE);
 
-            // Draw scaled with nearest-neighbor.
             singlePreviewCanvas.width = w * SINGLE_PREVIEW_SCALE;
             singlePreviewCanvas.height = h * SINGLE_PREVIEW_SCALE;
             singlePreviewCtx.imageSmoothingEnabled = false;
@@ -663,7 +816,10 @@
         function exportSelectedSingle(kind) {
             if (!selectedIcon) return;
 
-            const { imageData, w, h, scale } = extractIconImageData(selectedIcon);
+            const raw = singleExportScale ? parseInt(singleExportScale.value, 10) : NaN;
+            const chosenScale = Math.max(1, Math.min(10, Number.isFinite(raw) ? raw : 1));
+
+            const { imageData, w, h, scale } = extractIconImageDataWithScale(selectedIcon, chosenScale);
             const baseNameRaw = (singleOutputName.value || makeDefaultIconName(selectedIcon)).trim();
             const baseName = sanitizeFilePart(baseNameRaw) || makeDefaultIconName(selectedIcon);
 
@@ -697,7 +853,6 @@
         async function processAndDownload() {
             if (!isImageLoaded) return;
             processBtn.disabled = true;
-            statusDiv.textContent = "Processing...";
             
             const zip = new JSZip();
             const s = getSettings();
@@ -728,26 +883,24 @@
 
                         indexInGroup++;
 
-                        // Extract from source canvas (clean)
                         const imageData = srcCtx.getImageData(colX, rowY, s.w, s.h);
                         
-                        // Remove black background
                         for (let i = 0; i < imageData.data.length; i += 4) {
                             if (imageData.data[i] === 0 && imageData.data[i+1] === 0 && imageData.data[i+2] === 0) {
                                 imageData.data[i+3] = 0;
                             }
                         }
 
+                        applySolidColorOverrideIfNeeded(imageData, s);
+
                         const fileName = `${groupLabel}_${padIndex(indexInGroup)}`;
 
-                        // 1. PNG Scale + Export
                         const hiddenCanvas = document.createElement('canvas');
                         hiddenCanvas.width = s.w * s.scale;
                         hiddenCanvas.height = s.h * s.scale;
                         const hCtx = hiddenCanvas.getContext('2d');
                         hCtx.imageSmoothingEnabled = false;
 
-                        // Create temp canvas to hold the small image for scaling
                         const tempCanvas = document.createElement('canvas');
                         tempCanvas.width = s.w;
                         tempCanvas.height = s.h;
@@ -758,7 +911,6 @@
                         const pngData = hiddenCanvas.toDataURL("image/png").split(',')[1];
                         pFolder.file(`${fileName}.png`, pngData, {base64: true});
 
-                        // 2. SVG Scale + Export
                         const svgContent = generateSvg(imageData, s.w, s.h, s.scale);
                         sFolder.file(`${fileName}.svg`, svgContent);
                     }
@@ -767,12 +919,10 @@
                 }
             }
 
-            statusDiv.textContent = "Zipping...";
             const content = await zip.generateAsync({type:"blob"});
             saveAs(content, "emojimania_icons.zip");
             
             processBtn.disabled = false;
-            statusDiv.textContent = "Done! Check your downloads.";
         }
 
         function generateSvg(imageData, w, h, scale) {
@@ -786,7 +936,7 @@
                     const b = data[i+2];
                     const a = data[i+3];
                     
-                    if (a > 0) { // If not fully transparent
+                    if (a > 0) {
                         const hex = rgbToHex(r, g, b);
                         const opacity = a < 255 ? ` fill-opacity="${(a/255).toFixed(2)}"` : "";
                         rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}"${opacity}/>`;
