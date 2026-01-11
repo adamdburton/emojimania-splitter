@@ -212,7 +212,6 @@
         const singlePreviewCtx = singlePreviewCanvas.getContext('2d');
         const SINGLE_PREVIEW_SCALE = 16;
         
-        // Inputs
         const inputs = {
             offsetX: document.getElementById('offsetX'),
             offsetY: document.getElementById('offsetY'),
@@ -253,7 +252,6 @@
         /** @type {Map<number, Map<number, number[]>>} */
         let groupRowCols = new Map();
 
-        // Event Listeners
         fileInput.addEventListener('change', handleFileSelect);
         Object.values(inputs).forEach(input => input.addEventListener('input', drawPreview));
         if (inputs.exportScale) inputs.exportScale.addEventListener('input', updateSliderValueLabels);
@@ -598,7 +596,6 @@
         }
 
         function isBlockBlack(x, y, w, h) {
-            // Get pixel data
             try {
                 const p = srcCtx.getImageData(x, y, w, h).data;
                 for (let i = 0; i < p.length; i += 4) {
@@ -942,23 +939,41 @@
         }
 
         function generateSvg(imageData, w, h, scale) {
-            let rects = "";
+            /** @type {Map<string, {hex: string, opacity: number|null, rects: string[]}>} */
+            const groups = new Map();
             const data = imageData.data;
+
             for (let y = 0; y < h; y++) {
                 for (let x = 0; x < w; x++) {
                     const i = (y * w + x) * 4;
                     const r = data[i];
-                    const g = data[i+1];
-                    const b = data[i+2];
-                    const a = data[i+3];
-                    
-                    if (a > 0) {
-                        const hex = rgbToHex(r, g, b);
-                        const opacity = a < 255 ? ` fill-opacity="${(a/255).toFixed(2)}"` : "";
-                        rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hex}"${opacity}/>`;
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const a = data[i + 3];
+
+                    if (a <= 0) continue;
+
+                    const hex = rgbToHex(r, g, b);
+                    const opacity = a < 255 ? Number((a / 255).toFixed(2)) : null;
+                    const key = opacity === null ? hex : `${hex}|${opacity}`;
+
+                    if (!groups.has(key)) {
+                        groups.set(key, { hex, opacity, rects: [] });
                     }
+
+                    groups.get(key).rects.push(`<rect x="${x}" y="${y}" width="1" height="1"/>`);
                 }
             }
+
+            const keys = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+            let rects = "";
+            for (const key of keys) {
+                const group = groups.get(key);
+                if (!group) continue;
+                const opacityAttr = group.opacity === null ? "" : ` fill-opacity="${group.opacity}"`;
+                rects += `<g fill="${group.hex}"${opacityAttr}>${group.rects.join('')}</g>`;
+            }
+
             const finalW = w * scale || w;
             const finalH = h * scale || h;
             return `<svg xmlns="http://www.w3.org/2000/svg" width="${finalW}" height="${finalH}" viewBox="0 0 ${w} ${h}">${rects}</svg>`;
