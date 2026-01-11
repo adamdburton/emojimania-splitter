@@ -175,6 +175,10 @@
                     <div class="pt-1">
                         <label class="block text-xs uppercase text-gray-500">Solid Icon Color</label>
                         <input type="color" id="solidIconColor" value="#ffffff" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 h-9 focus:outline-none focus:border-blue-500">
+                        <label class="flex items-center gap-2 text-xs text-gray-400 mt-1 select-none">
+                            <input type="checkbox" id="applySolidIconColor" class="h-4 w-4 rounded border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-500">
+                            <span>Apply</span>
+                        </label>
                         <p class="text-[10px] text-gray-500 mt-1">Applies only when an icon’s non-transparent pixels are all the same color.</p>
                     </div>
                     <div class="grid grid-cols-2 gap-2">
@@ -222,6 +226,7 @@
             groupOffsetX: document.getElementById('groupOffsetX'),
             colsPerGroup: document.getElementById('colsPerGroup'),
             exportScale: document.getElementById('exportScale'),
+            applySolidIconColor: document.getElementById('applySolidIconColor'),
             solidIconColor: document.getElementById('solidIconColor'),
             previewZoom: document.getElementById('previewZoom'),
         };
@@ -264,8 +269,10 @@
         exportSinglePngBtn.addEventListener('click', () => exportSelectedSingle('png'));
         exportSingleSvgBtn.addEventListener('click', () => exportSelectedSingle('svg'));
         showOverlayInput.addEventListener('change', handleOverlayToggle);
+        if (inputs.applySolidIconColor) inputs.applySolidIconColor.addEventListener('change', handleApplySolidIconColorToggle);
 
         handleOverlayToggle();
+        handleApplySolidIconColorToggle();
         updateSliderValueLabels();
 
         function updateSliderValueLabels() {
@@ -283,6 +290,14 @@
         function handleOverlayToggle() {
             showOverlay = !!showOverlayInput.checked;
             overlayCanvas.style.opacity = '1';
+            drawPreview();
+        }
+
+        function handleApplySolidIconColorToggle() {
+            if (!inputs.applySolidIconColor || !inputs.solidIconColor) return;
+            const enabled = !!inputs.applySolidIconColor.checked;
+            inputs.solidIconColor.disabled = !enabled;
+            inputs.solidIconColor.classList.toggle('opacity-50', !enabled);
             drawPreview();
         }
 
@@ -474,6 +489,7 @@
                 groupOffX: parseInt(inputs.groupOffsetX.value) || 99,
                 cols: parseInt(inputs.colsPerGroup.value) || 8,
                 scale: parseInt(inputs.exportScale.value) || 1,
+                applySolidIconColor: (inputs.applySolidIconColor ? !!inputs.applySolidIconColor.checked : true),
                 solidIconColor: (inputs.solidIconColor && inputs.solidIconColor.value) ? String(inputs.solidIconColor.value) : "#ffffff",
                 previewZoom: Math.max(1, parseFloat(inputs.previewZoom.value) || 3),
             };
@@ -512,6 +528,7 @@
 
         function applySolidColorOverrideIfNeeded(imageData, s) {
             if (!imageData || !imageData.data || !s) return imageData;
+            if (s.applySolidIconColor === false) return imageData;
             if (!isIconSolidColor(imageData)) return imageData;
 
             const rgb = hexToRgb(s.solidIconColor);
